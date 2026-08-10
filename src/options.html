@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Настройки — Сохранить в Облако Mail</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <h1>Сохранить картинку в Облако Mail</h1>
+      <p class="sub">
+        Наведите курсор на картинку на любом сайте и нажмите появившуюся иконку —
+        изображение загрузится в Облако Mail в выбранную папку.
+      </p>
+
+      <form id="form">
+        <label class="field">
+          <span>E-mail Mail.ru</span>
+          <input id="email" type="email" placeholder="example@mail.ru" autocomplete="username" />
+        </label>
+
+        <label class="field">
+          <span>Пароль для внешнего приложения</span>
+          <input id="appPassword" type="password" placeholder="пароль приложения" autocomplete="current-password" />
+          <small>
+            Это не основной пароль от почты. Создайте его в
+            <a href="https://account.mail.ru/user/2-step-auth/passwords/" target="_blank" rel="noopener"
+              >настройках Mail ID → Пароли для внешних приложений</a
+            >
+            (<a href="https://help.mail.ru/id/settings/2fa/apps" target="_blank" rel="noopener">инструкция</a>;
+            нужен привязанный телефон).
+          </small>
+        </label>
+
+        <label class="field">
+          <span>Папка в Облаке</span>
+          <input id="folder" type="text" placeholder="Сохранённые картинки" />
+          <small>Папка создастся автоматически, если её ещё нет. Можно вложенную: <code>Картинки/С сайтов</code>.</small>
+        </label>
+
+        <label class="field">
+          <span>Категории (подпапки)</span>
+          <textarea id="categories" rows="4" placeholder="Интерьер&#10;Фото&#10;Арт&#10;Интерфейс"></textarea>
+          <small>
+            По одной в строке. При клике на иконку появится меню — выбранная категория станет
+            подпапкой внутри основной папки (например <code>Сохранённые картинки/Интерьер</code>).
+          </small>
+        </label>
+
+        <label class="check">
+          <input id="enabled" type="checkbox" />
+          <span>Показывать иконку на картинках</span>
+        </label>
+
+        <div class="actions">
+          <button type="submit" class="primary">Сохранить</button>
+          <button type="button" id="test" class="secondary">Проверить подключение</button>
+        </div>
+
+        <div id="status" class="status" hidden></div>
+      </form>
+
+      <div class="note">
+        ⚠️ Доступ по WebDAV у Облака Mail работает <b>только на платных тарифах</b>.
+        На бесплатном аккаунте загрузка не сработает (проверка подключения покажет отказ доступа).
+      </div>
+    </main>
+
+    <script src="options.js"></script>
+  </body>
+</html>
