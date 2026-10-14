@@ -26,15 +26,15 @@ function folderSegments(folder) {
   return folder.split("/").map((s) => s.trim()).filter(Boolean);
 }
 
-// Создать папку (и вложенные уровни). 201 = создано, 405/409-уже-есть → ок.
+// Создать папку (и вложенные уровни). 201 = создано, 405 = уже существует.
 export async function ensureFolder(folder, auth) {
   const segs = folderSegments(folder);
   if (!segs.length) return; // корень
   for (let i = 1; i <= segs.length; i++) {
     const url = buildUrl(segs.slice(0, i)) + "/";
     const res = await fetch(url, { method: "MKCOL", headers: { Authorization: auth } });
-    // 201 Created — новая папка; 405 Method Not Allowed / 409 — уже существует.
-    if (![201, 405, 409].includes(res.status)) {
+    // 409 означает конфликт (например, отсутствующий родитель), а не успех.
+    if (![201, 405].includes(res.status)) {
       if (res.status === 401) throw new Error("AUTH");
       if (res.status === 403) throw new Error("FORBIDDEN");
       throw new Error(`MKCOL ${res.status}`);
@@ -42,47 +42,31 @@ export async function ensureFolder(folder, auth) {
   }
 }
 
-// Существует ли ресурс по пути сегментов.
-export async function exists(segments, auth) {
-  const res = await fetch(buildUrl(segments), {
-    method: "HEAD",
-    headers: { Authorization: auth },
-  });
-  return res.status >= 200 && res.status < 300;
-}
-
-// Подобрать свободное имя: file.jpg → "file (1).jpg" → "file (2).jpg" …
-export async function resolveName(folder, filename, auth) {
+// Атомарно подобрать свободное имя и загрузить файл. Условный PUT не позволяет
+// двум параллельным сохранениям перезаписать друг друга.
+export async function uploadUniqueFile(folder, filename, blob, contentType, auth) {
   const segs = folderSegments(folder);
   const { base, ext } = splitName(filename);
-  let candidate = filename;
-  let n = 1;
-  while (await exists([...segs, candidate], auth)) {
-    candidate = `${base} (${n})${ext}`;
-    n++;
-    if (n > 999) break;
-  }
-  return candidate;
-}
 
-// Загрузить Blob в папку под именем filename. Возвращает финальное имя.
-export async function uploadFile(folder, filename, blob, contentType, auth) {
-  const segs = folderSegments(folder);
-  const url = buildUrl([...segs, filename]);
-  const res = await fetch(url, {
-    method: "PUT",
-    headers: {
-      Authorization: auth,
-      "Content-Type": contentType || "application/octet-stream",
-    },
-    body: blob,
-  });
-  if (res.status === 401) throw new Error("AUTH");
-  if (res.status === 403) throw new Error("FORBIDDEN");
-  if (!(res.status >= 200 && res.status < 300)) {
+  for (let n = 0; n <= 999; n++) {
+    const candidate = n === 0 ? filename : `${base} (${n})${ext}`;
+    const res = await fetch(buildUrl([...segs, candidate]), {
+      method: "PUT",
+      headers: {
+        Authorization: auth,
+        "Content-Type": contentType || "application/octet-stream",
+        "If-None-Match": "*",
+      },
+      body: blob,
+    });
+    if (res.status >= 200 && res.status < 300) return candidate;
+    if (res.status === 412) continue;
+    if (res.status === 401) throw new Error("AUTH");
+    if (res.status === 403) throw new Error("FORBIDDEN");
     throw new Error(`PUT ${res.status}`);
   }
-  return filename;
+
+  throw new Error("Не удалось подобрать свободное имя файла");
 }
 
 // Проверка подключения: PROPFIND корня. Возвращает {ok, reason}.

@@ -41,6 +41,53 @@ h1 {
   margin-bottom: 18px;
 }
 
+[hidden] {
+  display: none !important;
+}
+
+.destination {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0 0 22px;
+  padding: 0;
+  border: 0;
+}
+
+.destination legend {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.destination-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.destination-option:has(input:checked) {
+  border-color: var(--blue);
+  background: #eef4ff;
+}
+
+.destination-option input {
+  margin-top: 3px;
+}
+
+.destination-option b,
+.destination-option small {
+  display: block;
+}
+
+.destination-option small {
+  margin-top: 2px;
+  color: var(--muted);
+}
+
 .field > span {
   display: block;
   margin-bottom: 6px;
@@ -155,4 +202,21 @@ button {
   border: 1px solid #ffe49a;
   font-size: 13.5px;
   color: #7a5a00;
+}
+
+.note-local {
+  background: #eef4ff;
+  border-color: #c9ddff;
+  color: #0a5bd0;
+}
+
+@media (max-width: 520px) {
+  .wrap {
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .destination {
+    grid-template-columns: 1fr;
+  }
 }

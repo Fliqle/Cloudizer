@@ -2,8 +2,8 @@
 // Клик по кнопке открывает меню категорий — каждая кладёт картинку в свою подпапку.
 // Вся UI изолирована в Shadow DOM, поэтому CSS сайта на неё не влияет.
 (() => {
-  console.debug("[mailru-saver] content.js v1.5 — иконка следует за картинкой");
-  const MIN_SIZE = 100; // не показываем кнопку на картинках меньше этого по ширине или высоте
+  console.debug("[mailru-saver] content.js v1.6 — облако и локальные загрузки");
+  const MIN_SIZE = 100; // порог по фактическому размеру картинки на странице
   const U = (p) => chrome.runtime.getURL(p);
 
   let enabled = true;
@@ -14,7 +14,16 @@
     if (Array.isArray(s.categories) && s.categories.length) categories = s.categories;
   });
   chrome.storage.onChanged.addListener((changes) => {
-    if (changes.enabled) enabled = changes.enabled.newValue;
+    if (changes.enabled) {
+      enabled = changes.enabled.newValue;
+      if (!enabled && !busy) {
+        menuOpen = false;
+        menu.style.display = "none";
+        overImg = false;
+        overBtn = false;
+        hide();
+      }
+    }
     if (changes.categories && Array.isArray(changes.categories.newValue))
       categories = changes.categories.newValue;
   });
@@ -35,7 +44,7 @@
   const btn = document.createElement("button");
   btn.className = "mailru-saver-btn";
   btn.type = "button";
-  btn.title = "Сохранить в Облако Mail";
+  btn.title = "Сохранить изображение";
   btn.style.display = "none";
 
   const menu = document.createElement("div");
@@ -76,9 +85,7 @@
   const eligible = (img) => {
     if (!(img instanceof HTMLImageElement)) return false;
     const r = img.getBoundingClientRect();
-    const w = r.width || img.naturalWidth || 0;
-    const h = r.height || img.naturalHeight || 0;
-    return w >= MIN_SIZE && h >= MIN_SIZE;
+    return r.width >= MIN_SIZE && r.height >= MIN_SIZE;
   };
 
   const bestSrc = (img) => img.currentSrc || img.src || "";
@@ -207,7 +214,7 @@
       busy = false;
       if (resp?.ok) {
         setState("ok");
-        toast(`Сохранено: ${resp.name} → ${resp.folder}`);
+        toast(`${resp.pending ? "Загрузка началась" : "Сохранено"}: ${resp.name} → ${resp.folder}`);
       } else {
         setState("err");
         toast(errorText(resp?.error), true);
