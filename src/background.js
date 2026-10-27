@@ -119,7 +119,8 @@ async function handleSave(url, category) {
 }
 
 async function saveLocally(url, targetFolder) {
-  const filename = filenameFromUrl(url, "");
+  const contentType = await detectImageContentType(url);
+  const filename = filenameFromUrl(url, contentType);
   const relativePath = `${targetFolder}/${filename}`;
   const downloadId = await chrome.downloads.download({
     url,
@@ -136,6 +137,23 @@ async function saveLocally(url, targetFolder) {
   const visibleFolder = `Загрузки/${targetFolder}`;
   notify("Загрузка началась", `${finalName} → ${visibleFolder}`);
   return { ok: true, name: finalName, folder: visibleFolder, pending: true, downloadId };
+}
+
+async function detectImageContentType(url) {
+  if (String(url).startsWith("data:")) {
+    const match = String(url).match(/^data:([^;,]+)/i);
+    return match?.[1]?.toLowerCase().startsWith("image/") ? match[1] : "";
+  }
+  if (!/^https?:/i.test(String(url))) return "";
+
+  try {
+    const res = await fetch(url, { method: "HEAD", credentials: "omit" });
+    const contentType = res.headers.get("content-type") || "";
+    return contentType.toLowerCase().startsWith("image/") ? contentType : "";
+  } catch {
+    // Некоторые серверы запрещают HEAD. Загрузка всё равно может пройти через Chrome.
+    return "";
+  }
 }
 
 function safeFolderPath(folder) {

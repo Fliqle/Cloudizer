@@ -4,8 +4,8 @@ export const DEFAULTS = {
   destination: "cloud",
   email: "",
   appPassword: "",
-  folder: "Сохранённые картинки",
-  categories: ["Интерьер", "Фото", "Арт", "Интерфейс"],
+  folder: "Сохраненные картинки",
+  categories: ["Архитектура", "Дизайн", "Интерфейс"],
   enabled: true,
 };
 
@@ -53,10 +53,15 @@ export function sanitizeName(name) {
 export function filenameFromUrl(url, contentType) {
   let base = "image";
   let ext = "";
+  let detectedContentType = contentType;
 
   try {
     if (url.startsWith("data:")) {
       base = "image";
+      if (!detectedContentType) {
+        const match = url.match(/^data:([^;,]+)/i);
+        detectedContentType = match?.[1] || "";
+      }
     } else {
       const u = new URL(url);
       const last = decodeURIComponent(u.pathname.split("/").pop() || "");
@@ -75,7 +80,7 @@ export function filenameFromUrl(url, contentType) {
   }
 
   // расширение из URL может быть мусором (?, длинное) — доверяем Content-Type
-  const ctExt = extFromContentType(contentType);
+  const ctExt = extFromContentType(detectedContentType);
   if (ctExt) ext = ctExt;
   ext = ext.replace(/[^a-z0-9]/gi, "").slice(0, 10);
   if (!ext) ext = "jpg";

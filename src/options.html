@@ -3,21 +3,18 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Настройки — Сохранение изображений</title>
+    <title>Настройки Cloudizer</title>
     <link rel="stylesheet" href="options.css" />
   </head>
   <body>
     <main class="wrap">
-      <h1>Сохранение изображений</h1>
-      <p class="sub">
-        Наведите курсор на картинку на любом сайте и нажмите появившуюся иконку —
-        изображение сохранится в выбранное место с нужной структурой папок.
-      </p>
+      <h1>Cloudizer</h1>
+      <p class="sub">Сохраняйте понравившиеся картинки с сайтов в облако или локально</p>
 
       <form id="form">
         <fieldset class="destination">
           <legend>Куда сохранять</legend>
-          <label class="destination-option">
+          <label class="destination-option destination-option-cloud">
             <input id="destinationCloud" name="destination" type="radio" value="cloud" checked />
             <span><b>Облако Mail</b><small>Загрузка через WebDAV</small></span>
           </label>
@@ -29,13 +26,13 @@
 
         <div id="cloudSettings">
           <label class="field">
-            <span>E-mail Mail.ru</span>
-            <input id="email" type="email" placeholder="example@mail.ru" autocomplete="username" />
+            <span>Email</span>
+            <input id="email" type="email" placeholder="valera@mail.ru" autocomplete="username" />
           </label>
 
           <label class="field">
             <span>Пароль для внешнего приложения</span>
-            <input id="appPassword" type="password" placeholder="пароль приложения" autocomplete="current-password" />
+            <input id="appPassword" type="password" autocomplete="current-password" />
             <small>
               Это не основной пароль от почты. Создайте его в
               <a href="https://account.mail.ru/user/2-step-auth/passwords/" target="_blank" rel="noopener"
@@ -47,43 +44,39 @@
           </label>
         </div>
 
-        <label class="field">
+        <label class="field folder-field">
           <span id="folderLabel">Папка в Облаке</span>
-          <input id="folder" type="text" placeholder="Сохранённые картинки" />
+          <input id="folder" type="text" placeholder="Сохраненные картинки" />
           <small id="folderHint">Папка создастся автоматически, если её ещё нет.</small>
         </label>
 
-        <label class="field">
+        <div class="field categories-field">
           <span>Категории (подпапки)</span>
-          <textarea id="categories" rows="4" placeholder="Интерьер&#10;Фото&#10;Арт&#10;Интерфейс"></textarea>
-          <small>
-            По одной в строке. При клике на иконку появится меню — выбранная категория станет
-            подпапкой внутри основной папки (например <code>Сохранённые картинки/Интерьер</code>).
-          </small>
-        </label>
+          <div id="categoryTags" class="category-tags" aria-live="polite"></div>
+          <div class="category-create">
+            <input id="categoryInput" type="text" placeholder="Название папки" maxlength="180" />
+            <button type="button" id="addCategory" class="secondary">Добавить</button>
+          </div>
+        </div>
 
         <label class="check">
           <input id="enabled" type="checkbox" />
+          <span class="check-control" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M13.333 4L6 11.333L2.667 8" />
+            </svg>
+          </span>
           <span>Показывать иконку на картинках</span>
         </label>
 
         <div class="actions">
           <button type="submit" class="primary">Сохранить</button>
-          <button type="button" id="test" class="secondary">Проверить подключение</button>
+          <button type="button" id="test" class="subtle">Проверить подключение</button>
         </div>
 
         <div id="status" class="status" hidden></div>
       </form>
 
-      <div id="localNote" class="note note-local" hidden>
-        Локальные файлы сохраняются внутри стандартной папки «Загрузки». Если имя уже занято,
-        Chrome автоматически добавит к нему номер.
-      </div>
-
-      <div id="cloudNote" class="note">
-        ⚠️ Доступ по WebDAV у Облака Mail работает <b>только на платных тарифах</b>.
-        На бесплатном аккаунте загрузка не сработает (проверка подключения покажет отказ доступа).
-      </div>
     </main>
 
     <script src="options.js"></script>

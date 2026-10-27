@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Cloudizer",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Сохраняйте изображения в Облако Mail или на компьютер",
   "permissions": ["storage", "notifications", "contextMenus", "downloads"],
   "host_permissions": ["<all_urls>"],

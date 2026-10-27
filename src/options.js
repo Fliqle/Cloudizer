@@ -3,13 +3,14 @@ const DEFAULTS = {
   destination: "cloud",
   email: "",
   appPassword: "",
-  folder: "Сохранённые картинки",
-  categories: ["Интерьер", "Фото", "Арт", "Интерфейс"],
+  folder: "Сохраненные картинки",
+  categories: ["Архитектура", "Дизайн", "Интерфейс"],
   enabled: true,
 };
 
 const $ = (id) => document.getElementById(id);
 const statusEl = $("status");
+let categoryTags = [...DEFAULTS.categories];
 
 function showStatus(text, kind) {
   statusEl.hidden = false;
@@ -18,22 +19,20 @@ function showStatus(text, kind) {
 }
 
 async function load() {
-  const s = await chrome.storage.local.get(DEFAULTS);
+  const s =
+    typeof chrome === "undefined" || !chrome.storage?.local
+      ? DEFAULTS
+      : await chrome.storage.local.get(DEFAULTS);
   $(s.destination === "local" ? "destinationLocal" : "destinationCloud").checked = true;
   $("email").value = s.email;
   $("appPassword").value = s.appPassword;
   $("folder").value = s.folder;
-  $("categories").value = (s.categories || []).join("\n");
+  const storedCategories = Array.isArray(s.categories) ? s.categories : [];
+  categoryTags = uniqueCategories(storedCategories);
+  if (!categoryTags.length) categoryTags = [...DEFAULTS.categories];
+  renderCategoryTags();
   $("enabled").checked = s.enabled;
   updateDestinationUI();
-}
-
-function parseCategories(text) {
-  const list = text
-    .split("\n")
-    .map(normalizeSegment)
-    .filter(Boolean);
-  return list.length ? list : DEFAULTS.categories;
 }
 
 function normalizeSegment(value) {
@@ -43,6 +42,122 @@ function normalizeSegment(value) {
     .trim()
     .slice(0, 180);
   return segment === "." || segment === ".." ? "" : segment;
+}
+
+function uniqueCategories(values) {
+  const seen = new Set();
+  return values.map(normalizeSegment).filter((value) => {
+    const key = value.toLocaleLowerCase("ru");
+    if (!value || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function hasCategory(value, exceptIndex = -1) {
+  const key = value.toLocaleLowerCase("ru");
+  return categoryTags.some((category, index) =>
+    index !== exceptIndex && category.toLocaleLowerCase("ru") === key
+  );
+}
+
+function renderCategoryTags() {
+  const container = $("categoryTags");
+  container.replaceChildren();
+
+  categoryTags.forEach((category, index) => {
+    const tag = document.createElement("div");
+    tag.className = "category-tag";
+
+    const name = document.createElement("button");
+    name.type = "button";
+    name.className = "category-tag-name";
+    name.textContent = category;
+    name.title = "Нажмите, чтобы переименовать";
+    name.addEventListener("click", () => editCategory(index, tag));
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "category-tag-remove";
+    remove.setAttribute("aria-label", `Удалить папку «${category}»`);
+    remove.title = categoryTags.length === 1 ? "Должна остаться хотя бы одна папка" : "Удалить";
+    remove.disabled = categoryTags.length === 1;
+
+    const removeIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    removeIcon.setAttribute("width", "16");
+    removeIcon.setAttribute("height", "16");
+    removeIcon.setAttribute("viewBox", "0 0 16 16");
+    removeIcon.setAttribute("fill", "none");
+    removeIcon.setAttribute("aria-hidden", "true");
+
+    const removeIconPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    removeIconPath.setAttribute("d", "M4 4L12 12M12 4L4 12");
+    removeIconPath.setAttribute("stroke", "currentColor");
+    removeIconPath.setAttribute("stroke-width", "1.5");
+    removeIconPath.setAttribute("stroke-linecap", "round");
+    removeIcon.append(removeIconPath);
+    remove.append(removeIcon);
+
+    remove.addEventListener("click", () => {
+      categoryTags.splice(index, 1);
+      renderCategoryTags();
+    });
+
+    tag.append(name, remove);
+    container.append(tag);
+  });
+}
+
+function editCategory(index, tag) {
+  const name = tag.querySelector(".category-tag-name");
+  const input = document.createElement("input");
+  input.className = "category-tag-edit";
+  input.value = categoryTags[index];
+  input.maxLength = 180;
+  input.style.width = `${name.getBoundingClientRect().width}px`;
+  input.setAttribute("aria-label", "Новое название папки");
+  name.replaceWith(input);
+
+  const finish = (save) => {
+    if (!input.isConnected) return;
+    if (save) {
+      const value = normalizeSegment(input.value);
+      if (value && !hasCategory(value, index)) categoryTags[index] = value;
+    }
+    renderCategoryTags();
+  };
+
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      finish(true);
+    } else if (event.key === "Escape") {
+      finish(false);
+    }
+  });
+  input.addEventListener("blur", () => finish(true));
+  input.focus();
+  input.select();
+}
+
+function addCategory() {
+  const input = $("categoryInput");
+  const value = normalizeSegment(input.value);
+  input.setCustomValidity("");
+  if (!value) {
+    input.focus();
+    return;
+  }
+  if (hasCategory(value)) {
+    input.setCustomValidity("Такая папка уже есть.");
+    input.reportValidity();
+    return;
+  }
+
+  categoryTags.push(value);
+  input.value = "";
+  renderCategoryTags();
+  input.focus();
 }
 
 function normalizeFolder(value) {
@@ -59,7 +174,7 @@ function currentValues() {
     email: $("email").value.trim(),
     appPassword: $("appPassword").value,
     folder: normalizeFolder($("folder").value) || DEFAULTS.folder,
-    categories: parseCategories($("categories").value),
+    categories: [...categoryTags],
     enabled: $("enabled").checked,
   };
 }
@@ -69,7 +184,8 @@ $("form").addEventListener("submit", async (e) => {
   const values = currentValues();
   await chrome.storage.local.set(values);
   $("folder").value = values.folder;
-  $("categories").value = values.categories.join("\n");
+  categoryTags = [...values.categories];
+  renderCategoryTags();
   showStatus(
     $("destinationLocal").checked
       ? "Сохранено. Изображения будут загружаться на компьютер ✓"
@@ -81,10 +197,8 @@ $("form").addEventListener("submit", async (e) => {
 function updateDestinationUI() {
   const local = $("destinationLocal").checked;
   $("cloudSettings").hidden = local;
-  $("cloudNote").hidden = local;
   $("test").hidden = local;
-  $("localNote").hidden = !local;
-  $("folderLabel").textContent = local ? "Папка внутри «Загрузок»" : "Папка в Облаке";
+  $("folderLabel").textContent = local ? "Папка внутри «Загрузок»" : "Папка в облаке";
   $("folderHint").innerHTML = local
     ? "Файлы будут сохраняться в <code>Загрузки/название папки/категория</code>."
     : "Папка создастся автоматически, если её ещё нет. Можно вложенную: <code>Картинки/С сайтов</code>.";
@@ -93,6 +207,14 @@ function updateDestinationUI() {
 
 $("destinationCloud").addEventListener("change", updateDestinationUI);
 $("destinationLocal").addEventListener("change", updateDestinationUI);
+$("addCategory").addEventListener("click", addCategory);
+$("categoryInput").addEventListener("input", (event) => event.target.setCustomValidity(""));
+$("categoryInput").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    addCategory();
+  }
+});
 
 $("test").addEventListener("click", async () => {
   const v = currentValues();
